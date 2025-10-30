@@ -2,6 +2,9 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
+using Lumina.Excel.Sheets;
 
 namespace SamplePlugin.Windows;
 
