@@ -2,28 +2,24 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
-using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
-using Lumina.Excel.Sheets;
 
 namespace SamplePlugin.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
     private readonly Configuration configuration;
+    private string imagePathInput;
 
-    // We give this window a constant ID using ###.
-    // This allows for labels to be dynamic, like "{FPS Counter}fps###XYZ counter window",
-    // and the window ID will always be "###XYZ counter window" for ImGui
-    public ConfigWindow(Plugin plugin) : base("A Wonderful Configuration Window###With a constant ID")
+    public ConfigWindow(Plugin plugin) : base("Image Viewer Settings###ImageViewerConfig")
     {
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
                 ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(232, 90);
+        Size = new Vector2(500, 150);
         SizeCondition = ImGuiCond.Always;
 
         configuration = plugin.Configuration;
+        imagePathInput = configuration.ImagePath;
     }
 
     public void Dispose() { }
@@ -43,14 +39,24 @@ public class ConfigWindow : Window, IDisposable
 
     public override void Draw()
     {
-        // Can't ref a property, so use a local copy
-        var configValue = configuration.SomePropertyToBeSavedAndWithADefault;
-        if (ImGui.Checkbox("Random Config Bool", ref configValue))
+        ImGui.TextUnformatted("Image Viewer Settings");
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        ImGui.TextUnformatted("Image File Path:");
+        ImGui.SetNextItemWidth(450f);
+        if (ImGui.InputText("##imagepath", ref imagePathInput, 500))
         {
-            configuration.SomePropertyToBeSavedAndWithADefault = configValue;
-            // Can save immediately on change if you don't want to provide a "Save and Close" button
+            configuration.ImagePath = imagePathInput;
             configuration.Save();
         }
+        
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Example: C:\\Users\\YourName\\Pictures\\image.png");
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
 
         var movable = configuration.IsConfigWindowMovable;
         if (ImGui.Checkbox("Movable Config Window", ref movable))

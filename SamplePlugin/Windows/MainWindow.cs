@@ -10,7 +10,6 @@ namespace SamplePlugin.Windows;
 public class MainWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
-    private readonly string imagePath;
 
     public MainWindow(Plugin plugin, string goatImagePath)
         : base("Image Viewer##ImageViewerWindow", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
@@ -22,10 +21,6 @@ public class MainWindow : Window, IDisposable
         };
 
         this.plugin = plugin;
-        
-        // HARDCODED PATH - Change this to your image path!
-        // imagePath = @"C:\Users\YourName\Pictures\test.png";
-        imagePath = @"C:\Users\apkoh\Desktop\MyImage.png";
     }
 
     public void Dispose() { }
@@ -43,15 +38,29 @@ public class MainWindow : Window, IDisposable
         {
             if (child.Success)
             {
-                var texture = Plugin.TextureProvider.GetFromFile(imagePath).GetWrapOrDefault();
+                // Get the image path from configuration
+                string imagePath = plugin.Configuration.ImagePath;
                 
-                if (texture != null)
+                if (string.IsNullOrEmpty(imagePath))
                 {
-                    ImGui.Image(texture.Handle, new Vector2(texture.Width, texture.Height));
+                    ImGui.TextUnformatted("No image path set.");
+                    ImGui.Spacing();
+                    ImGui.TextUnformatted("Click 'Show Settings' to set an image path.");
                 }
                 else
                 {
-                    ImGui.TextUnformatted("Image not found - check the hardcoded path!");
+                    var texture = Plugin.TextureProvider.GetFromFile(imagePath).GetWrapOrDefault();
+                    
+                    if (texture != null)
+                    {
+                        ImGui.Image(texture.Handle, new Vector2(texture.Width, texture.Height));
+                    }
+                    else
+                    {
+                        ImGui.TextUnformatted($"Image not found: {imagePath}");
+                        ImGui.Spacing();
+                        ImGui.TextUnformatted("Check the path in settings.");
+                    }
                 }
             }
         }
