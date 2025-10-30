@@ -10,6 +10,7 @@ namespace SamplePlugin.Windows;
 public class MainWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
+    private readonly string imagePath;
 
     public MainWindow(Plugin plugin, string goatImagePath)
         : base("Image Viewer##ImageViewerWindow", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
@@ -21,6 +22,10 @@ public class MainWindow : Window, IDisposable
         };
 
         this.plugin = plugin;
+        
+        // HARDCODED PATH - Change this to your image path!
+        // imagePath = @"C:\Users\YourName\Pictures\test.png";
+        imagePath = @"C:\Users\apkoh\Desktop\MyImage.png";
     }
 
     public void Dispose() { }
@@ -34,11 +39,20 @@ public class MainWindow : Window, IDisposable
 
         ImGui.Spacing();
 
-        using (var child = ImRaii.Child("SomeChildWithAScrollbar", Vector2.Zero, true))
+        using (var child = ImRaii.Child("ImageArea", Vector2.Zero, true))
         {
             if (child.Success)
             {
+                var texture = Plugin.TextureProvider.GetFromFile(imagePath).GetWrapOrDefault();
                 
+                if (texture != null)
+                {
+                    ImGui.Image(texture.Handle, new Vector2(texture.Width, texture.Height));
+                }
+                else
+                {
+                    ImGui.TextUnformatted("Image not found - check the hardcoded path!");
+                }
             }
         }
     }
