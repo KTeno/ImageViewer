@@ -12,14 +12,11 @@ public class ConfigWindow : Window, IDisposable
 
     public ConfigWindow(Plugin plugin) : base("Image Viewer Settings###ImageViewerConfig")
     {
-        Flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
+        Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
                 ImGuiWindowFlags.NoScrollWithMouse;
 
-        SizeConstraints = new WindowSizeConstraints
-        {
-            MinimumSize = new Vector2(500, 150),
-            MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
-        };
+        Size = new Vector2(500, 150);
+        SizeCondition = ImGuiCond.Always;
 
         configuration = plugin.Configuration;
         imagePathInput = configuration.ImagePath;
