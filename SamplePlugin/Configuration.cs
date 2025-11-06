@@ -17,6 +17,9 @@ public class Configuration : IPluginConfiguration
     
     // Image scaling option
     public bool AllowUpscaling { get; set; } = false;
+    
+    // Zoom level (stored per session, not persisted)
+    // Note: This will reset to 1.0 on plugin reload
 
     // The below exist just to make saving less cumbersome
     public void Save()

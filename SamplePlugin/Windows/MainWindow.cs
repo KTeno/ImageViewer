@@ -11,6 +11,10 @@ public class MainWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
     private int currentImageIndex = 0;
+    private float zoomLevel = 1.0f;
+    private const float ZoomStep = 0.25f;
+    private const float MinZoom = 0.25f;
+    private const float MaxZoom = 10.0f;
 
     public MainWindow(Plugin plugin, string goatImagePath)
         : base("Image Viewer##ImageViewerWindow", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
@@ -35,7 +39,7 @@ public class MainWindow : Window, IDisposable
 
         ImGui.Spacing();
 
-        using (var child = ImRaii.Child("ImageArea", new Vector2(0, -30), true))
+        using (var child = ImRaii.Child("ImageArea", new Vector2(0, -30), true, ImGuiWindowFlags.HorizontalScrollbar))
         {
             if (child.Success)
             {
@@ -74,20 +78,35 @@ public class MainWindow : Window, IDisposable
                             // Calculate scale to fit window while maintaining aspect ratio
                             float scaleX = availableSize.X / imageSize.X;
                             float scaleY = availableSize.Y / imageSize.Y;
-                            float scale = Math.Min(scaleX, scaleY);
+                            float baseFitScale = Math.Min(scaleX, scaleY);
                             
-                            // Apply upscaling preference
-                            if (!plugin.Configuration.AllowUpscaling && scale > 1.0f)
+                            // Apply upscaling preference for base fit
+                            if (!plugin.Configuration.AllowUpscaling && baseFitScale > 1.0f)
                             {
-                                scale = 1.0f; // Cap at native size
+                                baseFitScale = 1.0f; // Cap at native size
                             }
                             
-                            var displaySize = imageSize * scale;
+                            // Apply zoom on top of the base fit scale
+                            float finalScale = baseFitScale * zoomLevel;
+                            var displaySize = imageSize * finalScale;
+                            
+                            // Handle mouse wheel zoom when hovering over image
+                            if (ImGui.IsItemHovered() || ImGui.IsWindowHovered())
+                            {
+                                float wheel = ImGui.GetIO().MouseWheel;
+                                if (wheel != 0)
+                                {
+                                    zoomLevel += wheel * ZoomStep;
+                                    zoomLevel = Math.Clamp(zoomLevel, MinZoom, MaxZoom);
+                                }
+                            }
                             
                             ImGui.Image(texture.Handle, displaySize);
+                            
                             ImGui.Spacing();
                             ImGui.TextUnformatted($"Image {currentImageIndex + 1} of {imagePath.Count}");
-                            ImGui.TextUnformatted($"Native: {texture.Width}x{texture.Height} | Display: {(int)displaySize.X}x{(int)displaySize.Y} ({scale * 100:F1}%)");
+                            ImGui.TextUnformatted($"Native: {texture.Width}x{texture.Height} | Display: {(int)displaySize.X}x{(int)displaySize.Y}");
+                            ImGui.TextUnformatted($"Zoom: {zoomLevel * 100:F0}%");
                         }
                         else
                         {
@@ -100,10 +119,39 @@ public class MainWindow : Window, IDisposable
             }
         }
 
-        // Next Image button at the bottom
+        // Bottom controls
         var imagePaths = plugin.Configuration.ImagePaths;
+        
+        // Zoom controls
+        if (ImGui.Button("-"))
+        {
+            zoomLevel -= ZoomStep;
+            zoomLevel = Math.Max(zoomLevel, MinZoom);
+        }
+        
+        ImGui.SameLine();
+        if (ImGui.Button("+"))
+        {
+            zoomLevel += ZoomStep;
+            zoomLevel = Math.Min(zoomLevel, MaxZoom);
+        }
+        
+        ImGui.SameLine();
+        if (ImGui.Button("Reset Zoom"))
+        {
+            zoomLevel = 1.0f;
+        }
+        
+        ImGui.SameLine();
+        ImGui.TextUnformatted($"{zoomLevel * 100:F0}%");
+        
+        // Next image button
         if (imagePaths != null && imagePaths.Count > 1)
         {
+            ImGui.SameLine();
+            ImGui.Spacing();
+            ImGui.SameLine();
+            
             if (ImGui.Button("Next Image"))
             {
                 currentImageIndex = (currentImageIndex + 1) % imagePaths.Count;
