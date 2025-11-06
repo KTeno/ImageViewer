@@ -67,13 +67,31 @@ public class MainWindow : Window, IDisposable
                         
                         if (texture != null)
                         {
-                            ImGui.Image(texture.Handle, new Vector2(texture.Width, texture.Height));
+                            // Get available space in the child window
+                            var availableSize = ImGui.GetContentRegionAvail();
+                            var imageSize = new Vector2(texture.Width, texture.Height);
+                            
+                            // Calculate scale to fit window while maintaining aspect ratio
+                            float scaleX = availableSize.X / imageSize.X;
+                            float scaleY = availableSize.Y / imageSize.Y;
+                            float scale = Math.Min(scaleX, scaleY);
+                            
+                            // Apply upscaling preference
+                            if (!plugin.Configuration.AllowUpscaling && scale > 1.0f)
+                            {
+                                scale = 1.0f; // Cap at native size
+                            }
+                            
+                            var displaySize = imageSize * scale;
+                            
+                            ImGui.Image(texture.Handle, displaySize);
                             ImGui.Spacing();
                             ImGui.TextUnformatted($"Image {currentImageIndex + 1} of {imagePath.Count}");
+                            ImGui.TextUnformatted($"Native: {texture.Width}x{texture.Height} | Display: {(int)displaySize.X}x{(int)displaySize.Y} ({scale * 100:F1}%)");
                         }
                         else
                         {
-                            ImGui.TextUnformatted($"Image not found: {imagePath}");
+                            ImGui.TextUnformatted($"Image not found: {imagePathStr}");
                             ImGui.Spacing();
                             ImGui.TextUnformatted("Check the path in settings.");
                         }

@@ -25,12 +25,13 @@ public class ConfigWindow : Window, IDisposable
         configuration = plugin.Configuration;
         
         // Initialize input list from configuration
-        imagePathInputs = new List<string>(configuration.ImagePaths);
-        
-        // Ensure at least one entry exists
-        if (imagePathInputs.Count == 0)
+        if (configuration.ImagePaths == null || configuration.ImagePaths.Count == 0)
         {
-            imagePathInputs.Add(string.Empty);
+            imagePathInputs = new List<string> { string.Empty };
+        }
+        else
+        {
+            imagePathInputs = new List<string>(configuration.ImagePaths);
         }
     }
 
@@ -98,6 +99,18 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Spacing();
         ImGui.TextUnformatted("Example: C:\\Users\\YourName\\Pictures\\image.png");
 
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        // Image scaling option
+        var allowUpscaling = configuration.AllowUpscaling;
+        if (ImGui.Checkbox("Allow images to scale larger than native size", ref allowUpscaling))
+        {
+            configuration.AllowUpscaling = allowUpscaling;
+            configuration.Save();
+        }
+        
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();

@@ -13,7 +13,10 @@ public class Configuration : IPluginConfiguration
     public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
     
     // Image paths list
-    public List<string> ImagePaths { get; set; } = new List<string> { string.Empty };
+    public List<string> ImagePaths { get; set; } = new List<string>();
+    
+    // Image scaling option
+    public bool AllowUpscaling { get; set; } = false;
 
     // The below exist just to make saving less cumbersome
     public void Save()
