@@ -10,6 +10,7 @@ namespace SamplePlugin.Windows;
 public class MainWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
+    private int currentImageIndex = 0;
 
     public MainWindow(Plugin plugin, string goatImagePath)
         : base("Image Viewer##ImageViewerWindow", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
@@ -34,35 +35,64 @@ public class MainWindow : Window, IDisposable
 
         ImGui.Spacing();
 
-        using (var child = ImRaii.Child("ImageArea", Vector2.Zero, true))
+        using (var child = ImRaii.Child("ImageArea", new Vector2(0, -30), true))
         {
             if (child.Success)
             {
-                // Get the image path from configuration
-                string imagePath = plugin.Configuration.ImagePath;
+                var imagePath = plugin.Configuration.ImagePaths;
                 
-                if (string.IsNullOrEmpty(imagePath))
+                if (imagePath == null || imagePath.Count == 0 || string.IsNullOrEmpty(imagePath[0]))
                 {
-                    ImGui.TextUnformatted("No image path set.");
+                    ImGui.TextUnformatted("No image paths set.");
                     ImGui.Spacing();
-                    ImGui.TextUnformatted("Click 'Show Settings' to set an image path.");
+                    ImGui.TextUnformatted("Click 'Show Settings' to add image paths.");
                 }
                 else
                 {
-                    var texture = Plugin.TextureProvider.GetFromFile(imagePath).GetWrapOrDefault();
-                    
-                    if (texture != null)
+                    // Ensure currentImageIndex is valid
+                    if (currentImageIndex >= imagePath.Count)
                     {
-                        ImGui.Image(texture.Handle, new Vector2(texture.Width, texture.Height));
+                        currentImageIndex = 0;
+                    }
+                    
+                    string imagePathStr = imagePath[currentImageIndex];
+                    
+                    if (string.IsNullOrEmpty(imagePathStr))
+                    {
+                        ImGui.TextUnformatted($"Image {currentImageIndex + 1} has no path set.");
                     }
                     else
                     {
-                        ImGui.TextUnformatted($"Image not found: {imagePath}");
-                        ImGui.Spacing();
-                        ImGui.TextUnformatted("Check the path in settings.");
+                        var texture = Plugin.TextureProvider.GetFromFile(imagePathStr).GetWrapOrDefault();
+                        
+                        if (texture != null)
+                        {
+                            ImGui.Image(texture.Handle, new Vector2(texture.Width, texture.Height));
+                            ImGui.Spacing();
+                            ImGui.TextUnformatted($"Image {currentImageIndex + 1} of {imagePath.Count}");
+                        }
+                        else
+                        {
+                            ImGui.TextUnformatted($"Image not found: {imagePath}");
+                            ImGui.Spacing();
+                            ImGui.TextUnformatted("Check the path in settings.");
+                        }
                     }
                 }
             }
+        }
+
+        // Next Image button at the bottom
+        var imagePaths = plugin.Configuration.ImagePaths;
+        if (imagePaths != null && imagePaths.Count > 1)
+        {
+            if (ImGui.Button("Next Image"))
+            {
+                currentImageIndex = (currentImageIndex + 1) % imagePaths.Count;
+            }
+            
+            ImGui.SameLine();
+            ImGui.TextUnformatted($"({currentImageIndex + 1}/{imagePaths.Count})");
         }
     }
 }

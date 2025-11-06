@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
@@ -8,18 +9,29 @@ namespace SamplePlugin.Windows;
 public class ConfigWindow : Window, IDisposable
 {
     private readonly Configuration configuration;
-    private string imagePathInput;
+    private List<string> imagePathInputs;
 
     public ConfigWindow(Plugin plugin) : base("Image Viewer Settings###ImageViewerConfig")
     {
-        Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
+        Flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
                 ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(500, 150);
-        SizeCondition = ImGuiCond.Always;
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(500, 150),
+            MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
+        };
 
         configuration = plugin.Configuration;
-        imagePathInput = configuration.ImagePath;
+        
+        // Initialize input list from configuration
+        imagePathInputs = new List<string>(configuration.ImagePaths);
+        
+        // Ensure at least one entry exists
+        if (imagePathInputs.Count == 0)
+        {
+            imagePathInputs.Add(string.Empty);
+        }
     }
 
     public void Dispose() { }
@@ -43,13 +55,45 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
-        ImGui.TextUnformatted("Image File Path:");
-        ImGui.SetNextItemWidth(450f);
-        if (ImGui.InputText("##imagepath", ref imagePathInput, 500))
+        ImGui.TextUnformatted("Image File Paths:");
+        ImGui.Spacing();
+
+        // Display each image path with remove button
+        for (int i = 0; i < imagePathInputs.Count; i++)
         {
-            configuration.ImagePath = imagePathInput;
-            configuration.Save();
+            ImGui.PushID(i);
+            
+            ImGui.SetNextItemWidth(400f);
+            string currentPath = imagePathInputs[i];
+            if (ImGui.InputText($"##imagepath{i}", ref currentPath, 500))
+            {
+                imagePathInputs[i] = currentPath;
+                SavePaths();
+            }
+            
+            ImGui.SameLine();
+            if (ImGui.Button("Remove") && imagePathInputs.Count > 1)
+            {
+                imagePathInputs.RemoveAt(i);
+                SavePaths();
+                ImGui.PopID();
+                break; // Exit loop after removing to avoid index issues
+            }
+            
+            ImGui.PopID();
         }
+
+        ImGui.Spacing();
+        
+        // Add new path button
+        if (ImGui.Button("Add Image Path"))
+        {
+            imagePathInputs.Add(string.Empty);
+            SavePaths();
+        }
+        
+        ImGui.Spacing();
+        ImGui.TextUnformatted($"Total images: {imagePathInputs.Count}");
         
         ImGui.Spacing();
         ImGui.TextUnformatted("Example: C:\\Users\\YourName\\Pictures\\image.png");
@@ -64,5 +108,11 @@ public class ConfigWindow : Window, IDisposable
             configuration.IsConfigWindowMovable = movable;
             configuration.Save();
         }
+    }
+
+    private void SavePaths()
+    {
+        configuration.ImagePaths = new List<string>(imagePathInputs);
+        configuration.Save();
     }
 }
