@@ -4,6 +4,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+//using ImGuiNET;
 
 namespace SamplePlugin.Windows;
 
@@ -12,9 +13,14 @@ public class MainWindow : Window, IDisposable
     private readonly Plugin plugin;
     private int currentImageIndex = 0;
     private float zoomLevel = 1.0f;
+    private Vector2 scrollPosition = Vector2.Zero;
+    private bool isDragging = false;
+    private Vector2 dragStartMousePos = Vector2.Zero;
+    private Vector2 dragStartScrollPos = Vector2.Zero;
     private const float ZoomStep = 0.25f;
     private const float MinZoom = 0.25f;
     private const float MaxZoom = 10.0f;
+    private const float PanStep = 50.0f;
 
     public MainWindow(Plugin plugin, string goatImagePath)
         : base("Image Viewer##ImageViewerWindow", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
@@ -38,6 +44,27 @@ public class MainWindow : Window, IDisposable
         }
 
         ImGui.Spacing();
+
+        // Handle arrow key panning when window is focused
+        if (ImGui.IsWindowFocused() && zoomLevel > 1.0f)
+        {
+            if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow))
+            {
+                scrollPosition.X -= PanStep;
+            }
+            if (ImGui.IsKeyPressed(ImGuiKey.RightArrow))
+            {
+                scrollPosition.X += PanStep;
+            }
+            if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
+            {
+                scrollPosition.Y -= PanStep;
+            }
+            if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
+            {
+                scrollPosition.Y += PanStep;
+            }
+        }
 
         using (var child = ImRaii.Child("ImageArea", new Vector2(0, -30), true, ImGuiWindowFlags.HorizontalScrollbar))
         {
@@ -90,8 +117,8 @@ public class MainWindow : Window, IDisposable
                             float finalScale = baseFitScale * zoomLevel;
                             var displaySize = imageSize * finalScale;
                             
-                            // Handle mouse wheel zoom when hovering over image
-                            if (ImGui.IsItemHovered() || ImGui.IsWindowHovered())
+                            // Handle mouse wheel zoom when hovering over the child window
+                            if (ImGui.IsWindowHovered())
                             {
                                 float wheel = ImGui.GetIO().MouseWheel;
                                 if (wheel != 0)
@@ -99,6 +126,49 @@ public class MainWindow : Window, IDisposable
                                     zoomLevel += wheel * ZoomStep;
                                     zoomLevel = Math.Clamp(zoomLevel, MinZoom, MaxZoom);
                                 }
+                                
+                                // Handle right-click drag panning when zoomed
+                                if (zoomLevel > 1.0f)
+                                {
+                                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+                                    {
+                                        isDragging = true;
+                                        dragStartMousePos = ImGui.GetMousePos();
+                                        dragStartScrollPos = scrollPosition;
+                                    }
+                                }
+                            }
+                            
+                            // Update dragging
+                            if (isDragging)
+                            {
+                                if (ImGui.IsMouseDown(ImGuiMouseButton.Right))
+                                {
+                                    var currentMousePos = ImGui.GetMousePos();
+                                    var mouseDelta = dragStartMousePos - currentMousePos;
+                                    scrollPosition = dragStartScrollPos + mouseDelta;
+                                }
+                                else
+                                {
+                                    isDragging = false;
+                                }
+                            }
+                            
+                            // Apply scroll position if zoomed
+                            if (zoomLevel > 1.0f)
+                            {
+                                ImGui.SetScrollX(scrollPosition.X);
+                                ImGui.SetScrollY(scrollPosition.Y);
+                                
+                                // Update scroll position to actual scroll (for clamping)
+                                scrollPosition.X = ImGui.GetScrollX();
+                                scrollPosition.Y = ImGui.GetScrollY();
+                            }
+                            else
+                            {
+                                // Reset scroll when not zoomed
+                                scrollPosition = Vector2.Zero;
+                                isDragging = false;
                             }
                             
                             ImGui.Image(texture.Handle, displaySize);
@@ -106,7 +176,7 @@ public class MainWindow : Window, IDisposable
                             ImGui.Spacing();
                             ImGui.TextUnformatted($"Image {currentImageIndex + 1} of {imagePath.Count}");
                             ImGui.TextUnformatted($"Native: {texture.Width}x{texture.Height} | Display: {(int)displaySize.X}x{(int)displaySize.Y}");
-                            ImGui.TextUnformatted($"Zoom: {zoomLevel * 100:F0}%");
+                            ImGui.TextUnformatted($"Zoom: {zoomLevel * 100:F0}%" + (zoomLevel > 1.0f ? " (Right-click drag or arrow keys to pan)" : ""));
                         }
                         else
                         {
@@ -140,6 +210,8 @@ public class MainWindow : Window, IDisposable
         if (ImGui.Button("Reset Zoom"))
         {
             zoomLevel = 1.0f;
+            scrollPosition = Vector2.Zero;
+            isDragging = false;
         }
         
         ImGui.SameLine();
@@ -155,6 +227,9 @@ public class MainWindow : Window, IDisposable
             if (ImGui.Button("Next Image"))
             {
                 currentImageIndex = (currentImageIndex + 1) % imagePaths.Count;
+                zoomLevel = 1.0f;
+                scrollPosition = Vector2.Zero;
+                isDragging = false;
             }
             
             ImGui.SameLine();
