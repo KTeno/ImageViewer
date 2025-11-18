@@ -4,7 +4,6 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-//using ImGuiNET;
 
 namespace SamplePlugin.Windows;
 
@@ -217,13 +216,26 @@ public class MainWindow : Window, IDisposable
         ImGui.SameLine();
         ImGui.TextUnformatted($"{zoomLevel * 100:F0}%");
         
-        // Next image button
+        // Image navigation buttons
         if (imagePaths != null && imagePaths.Count > 1)
         {
             ImGui.SameLine();
             ImGui.Spacing();
             ImGui.SameLine();
             
+            if (ImGui.Button("Previous Image"))
+            {
+                currentImageIndex--;
+                if (currentImageIndex < 0)
+                {
+                    currentImageIndex = imagePaths.Count - 1;
+                }
+                zoomLevel = 1.0f;
+                scrollPosition = Vector2.Zero;
+                isDragging = false;
+            }
+            
+            ImGui.SameLine();
             if (ImGui.Button("Next Image"))
             {
                 currentImageIndex = (currentImageIndex + 1) % imagePaths.Count;
