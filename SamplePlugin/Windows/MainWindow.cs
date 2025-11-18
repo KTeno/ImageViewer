@@ -37,6 +37,17 @@ public class MainWindow : Window, IDisposable
 
     public override void Draw()
     {
+        // Check for keybinds
+        CheckKeybinds();
+        
+        // Debug: Show keybind status
+        var config = plugin.Configuration;
+        if (!string.IsNullOrEmpty(config.KeybindNextImage))
+        {
+            ImGui.TextUnformatted($"Next Image Keybind: {config.KeybindNextImage}");
+            ImGui.TextUnformatted($"Window Focused: {ImGui.IsWindowFocused()}");
+        }
+
         if (ImGui.Button("Show Settings"))
         {
             plugin.ToggleConfigUi();
@@ -194,15 +205,13 @@ public class MainWindow : Window, IDisposable
         // Zoom controls
         if (ImGui.Button("-"))
         {
-            zoomLevel -= ZoomStep;
-            zoomLevel = Math.Max(zoomLevel, MinZoom);
+            ZoomOut();
         }
         
         ImGui.SameLine();
         if (ImGui.Button("+"))
         {
-            zoomLevel += ZoomStep;
-            zoomLevel = Math.Min(zoomLevel, MaxZoom);
+            ZoomIn();
         }
         
         ImGui.SameLine();
@@ -225,27 +234,180 @@ public class MainWindow : Window, IDisposable
             
             if (ImGui.Button("Previous Image"))
             {
-                currentImageIndex--;
-                if (currentImageIndex < 0)
-                {
-                    currentImageIndex = imagePaths.Count - 1;
-                }
-                zoomLevel = 1.0f;
-                scrollPosition = Vector2.Zero;
-                isDragging = false;
+                PreviousImage();
             }
             
             ImGui.SameLine();
             if (ImGui.Button("Next Image"))
             {
-                currentImageIndex = (currentImageIndex + 1) % imagePaths.Count;
-                zoomLevel = 1.0f;
-                scrollPosition = Vector2.Zero;
-                isDragging = false;
+                NextImage();
             }
             
             ImGui.SameLine();
             ImGui.TextUnformatted($"({currentImageIndex + 1}/{imagePaths.Count})");
         }
+    }
+
+    private void CheckKeybinds()
+    {
+        // Only check keybinds when window is focused
+        if (!ImGui.IsWindowFocused())
+            return;
+
+        var config = plugin.Configuration;
+
+        // Debug: Log what keybinds are set
+        if (!string.IsNullOrEmpty(config.KeybindNextImage))
+        {
+            bool pressed = IsKeybindPressed(config.KeybindNextImage);
+            if (pressed)
+            {
+                Plugin.Log.Information($"Next Image keybind triggered: {config.KeybindNextImage}");
+                NextImage();
+            }
+        }
+        
+        if (!string.IsNullOrEmpty(config.KeybindPreviousImage) && IsKeybindPressed(config.KeybindPreviousImage))
+        {
+            Plugin.Log.Information($"Previous Image keybind triggered: {config.KeybindPreviousImage}");
+            PreviousImage();
+        }
+        
+        if (!string.IsNullOrEmpty(config.KeybindZoomIn) && IsKeybindPressed(config.KeybindZoomIn))
+        {
+            Plugin.Log.Information($"Zoom In keybind triggered: {config.KeybindZoomIn}");
+            ZoomIn();
+        }
+        
+        if (!string.IsNullOrEmpty(config.KeybindZoomOut) && IsKeybindPressed(config.KeybindZoomOut))
+        {
+            Plugin.Log.Information($"Zoom Out keybind triggered: {config.KeybindZoomOut}");
+            ZoomOut();
+        }
+        
+        if (!string.IsNullOrEmpty(config.KeybindToggleWindow) && IsKeybindPressed(config.KeybindToggleWindow))
+        {
+            Plugin.Log.Information($"Toggle Window keybind triggered: {config.KeybindToggleWindow}");
+            Toggle();
+        }
+    }
+
+    private bool IsKeybindPressed(string keybind)
+    {
+        if (string.IsNullOrEmpty(keybind))
+            return false;
+
+        // Parse the keybind string
+        var parts = keybind.ToLower().Split('+');
+        
+        bool requiresCtrl = false;
+        bool requiresShift = false;
+        bool requiresAlt = false;
+        string? keyName = null;
+
+        foreach (var part in parts)
+        {
+            string trimmed = part.Trim();
+            if (trimmed == "ctrl")
+                requiresCtrl = true;
+            else if (trimmed == "shift")
+                requiresShift = true;
+            else if (trimmed == "alt")
+                requiresAlt = true;
+            else
+                keyName = trimmed;
+        }
+
+        if (keyName == null)
+        {
+            Plugin.Log.Warning($"No key name found in keybind: {keybind}");
+            return false;
+        }
+
+        // Check modifiers
+        bool ctrlPressed = ImGui.IsKeyDown(ImGuiKey.ModCtrl);
+        bool shiftPressed = ImGui.IsKeyDown(ImGuiKey.ModShift);
+        bool altPressed = ImGui.IsKeyDown(ImGuiKey.ModAlt);
+
+        if (ctrlPressed != requiresCtrl || shiftPressed != requiresShift || altPressed != requiresAlt)
+            return false;
+
+        // Check the main key
+        ImGuiKey key = ParseKeyName(keyName);
+        if (key == ImGuiKey.None)
+        {
+            Plugin.Log.Warning($"Could not parse key name: {keyName}");
+            return false;
+        }
+
+        bool keyPressed = ImGui.IsKeyPressed(key);
+        
+        // Debug logging
+        if (keyPressed)
+        {
+            Plugin.Log.Information($"Key {keyName} pressed! Full keybind: {keybind}");
+        }
+
+        return keyPressed;
+    }
+
+    private ImGuiKey ParseKeyName(string keyName)
+    {
+        // Parse letter keys
+        if (keyName.Length == 1 && char.IsLetter(keyName[0]))
+        {
+            char upperKey = char.ToUpper(keyName[0]);
+            return ImGuiKey.A + (upperKey - 'A');
+        }
+
+        // Parse number keys (0-9)
+        if (keyName.Length == 1 && char.IsDigit(keyName[0]))
+        {
+            // For now, return None since we couldn't get number keys working
+            // Can be added later if we figure out the correct enum values
+            return ImGuiKey.None;
+        }
+
+        return ImGuiKey.None;
+    }
+
+    private void NextImage()
+    {
+        var imagePaths = plugin.Configuration.ImagePaths;
+        if (imagePaths != null && imagePaths.Count > 1)
+        {
+            currentImageIndex = (currentImageIndex + 1) % imagePaths.Count;
+            zoomLevel = 1.0f;
+            scrollPosition = Vector2.Zero;
+            isDragging = false;
+        }
+    }
+
+    private void PreviousImage()
+    {
+        var imagePaths = plugin.Configuration.ImagePaths;
+        if (imagePaths != null && imagePaths.Count > 1)
+        {
+            currentImageIndex--;
+            if (currentImageIndex < 0)
+            {
+                currentImageIndex = imagePaths.Count - 1;
+            }
+            zoomLevel = 1.0f;
+            scrollPosition = Vector2.Zero;
+            isDragging = false;
+        }
+    }
+
+    private void ZoomIn()
+    {
+        zoomLevel += ZoomStep;
+        zoomLevel = Math.Min(zoomLevel, MaxZoom);
+    }
+
+    private void ZoomOut()
+    {
+        zoomLevel -= ZoomStep;
+        zoomLevel = Math.Max(zoomLevel, MinZoom);
     }
 }
