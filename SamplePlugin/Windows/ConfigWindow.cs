@@ -10,6 +10,8 @@ public class ConfigWindow : Window, IDisposable
 {
     private readonly Configuration configuration;
     private List<string> imagePathInputs;
+    private string? editingKeybindFor = null;
+    private string keybindInputBuffer = string.Empty;
 
     public ConfigWindow(Plugin plugin) : base("Image Viewer Settings###ImageViewerConfig")
     {
@@ -18,7 +20,7 @@ public class ConfigWindow : Window, IDisposable
 
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(500, 150),
+            MinimumSize = new Vector2(500, 200),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
 
@@ -56,6 +58,28 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
+        if (ImGui.BeginTabBar("SettingsTabs"))
+        {
+            // General Settings Tab
+            if (ImGui.BeginTabItem("General"))
+            {
+                DrawGeneralTab();
+                ImGui.EndTabItem();
+            }
+
+            // Keybinds Tab
+            if (ImGui.BeginTabItem("Keybinds"))
+            {
+                DrawKeybindsTab();
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
+        }
+    }
+
+    private void DrawGeneralTab()
+    {
         ImGui.TextUnformatted("Image File Paths:");
         ImGui.Spacing();
 
@@ -121,6 +145,124 @@ public class ConfigWindow : Window, IDisposable
             configuration.IsConfigWindowMovable = movable;
             configuration.Save();
         }
+    }
+
+    private void DrawKeybindsTab()
+    {
+        ImGui.TextUnformatted("Keybind Settings");
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Examples: a, ctrl+a, shift+z, ctrl+alt+b");
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        DrawKeybindRow("Next Image", "KeybindNextImage", configuration.KeybindNextImage);
+        DrawKeybindRow("Previous Image", "KeybindPreviousImage", configuration.KeybindPreviousImage);
+        DrawKeybindRow("Zoom In", "KeybindZoomIn", configuration.KeybindZoomIn);
+        DrawKeybindRow("Zoom Out", "KeybindZoomOut", configuration.KeybindZoomOut);
+        DrawKeybindRow("Toggle Window", "KeybindToggleWindow", configuration.KeybindToggleWindow);
+
+        // Show input popup if editing
+        if (editingKeybindFor != null)
+        {
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Enter keybind (e.g., ctrl+a, shift+z):");
+            ImGui.SetNextItemWidth(300f);
+            if (ImGui.InputText("##keybindinput", ref keybindInputBuffer, 100, ImGuiInputTextFlags.EnterReturnsTrue))
+            {
+                // Parse and save the keybind
+                string normalizedKeybind = NormalizeKeybind(keybindInputBuffer);
+                SetKeybind(editingKeybindFor, normalizedKeybind);
+                editingKeybindFor = null;
+                keybindInputBuffer = string.Empty;
+            }
+            
+            ImGui.SameLine();
+            if (ImGui.Button("Save"))
+            {
+                string normalizedKeybind = NormalizeKeybind(keybindInputBuffer);
+                SetKeybind(editingKeybindFor, normalizedKeybind);
+                editingKeybindFor = null;
+                keybindInputBuffer = string.Empty;
+            }
+            
+            ImGui.SameLine();
+            if (ImGui.Button("Cancel"))
+            {
+                editingKeybindFor = null;
+                keybindInputBuffer = string.Empty;
+            }
+        }
+    }
+
+    private void DrawKeybindRow(string label, string keybindId, string currentValue)
+    {
+        ImGui.TextUnformatted($"{label}:");
+        ImGui.SameLine(150);
+        
+        string displayValue = string.IsNullOrEmpty(currentValue) ? "Not set" : currentValue;
+        ImGui.TextUnformatted(displayValue);
+        
+        ImGui.SameLine(300);
+        if (ImGui.Button($"Set##{keybindId}"))
+        {
+            editingKeybindFor = keybindId;
+            keybindInputBuffer = currentValue; // Pre-fill with current value
+        }
+        
+        ImGui.SameLine();
+        if (ImGui.Button($"Clear##{keybindId}"))
+        {
+            SetKeybind(keybindId, string.Empty);
+        }
+        
+        ImGui.Spacing();
+    }
+
+    private string NormalizeKeybind(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+
+        // Split by + and trim each part
+        var parts = input.ToLower().Split('+');
+        var normalized = new List<string>();
+
+        foreach (var part in parts)
+        {
+            string trimmed = part.Trim();
+            if (!string.IsNullOrEmpty(trimmed))
+            {
+                normalized.Add(trimmed);
+            }
+        }
+
+        return string.Join("+", normalized);
+    }
+
+    private void SetKeybind(string keybindId, string value)
+    {
+        switch (keybindId)
+        {
+            case "KeybindNextImage":
+                configuration.KeybindNextImage = value;
+                break;
+            case "KeybindPreviousImage":
+                configuration.KeybindPreviousImage = value;
+                break;
+            case "KeybindZoomIn":
+                configuration.KeybindZoomIn = value;
+                break;
+            case "KeybindZoomOut":
+                configuration.KeybindZoomOut = value;
+                break;
+            case "KeybindToggleWindow":
+                configuration.KeybindToggleWindow = value;
+                break;
+        }
+        configuration.Save();
     }
 
     private void SavePaths()

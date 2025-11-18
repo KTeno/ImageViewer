@@ -18,8 +18,12 @@ public class Configuration : IPluginConfiguration
     // Image scaling option
     public bool AllowUpscaling { get; set; } = false;
     
-    // Zoom level (stored per session, not persisted)
-    // Note: This will reset to 1.0 on plugin reload
+    // Keybinds (stored as string to support modifiers like "ctrl+a", "shift+1", etc.)
+    public string KeybindNextImage { get; set; } = string.Empty;
+    public string KeybindPreviousImage { get; set; } = string.Empty;
+    public string KeybindZoomIn { get; set; } = string.Empty;
+    public string KeybindZoomOut { get; set; } = string.Empty;
+    public string KeybindToggleWindow { get; set; } = string.Empty;
 
     // The below exist just to make saving less cumbersome
     public void Save()
