@@ -1,0 +1,16 @@
+[
+    {
+      "Name": "Image Viewer",
+      "InternalName": "ImageViewer",
+      "AssemblyVersion": "0.0.0.1",
+      "Description": "View images from local files or URLs in-game",
+      "ApplicableVersion": "any",
+      "RepoUrl": "https://github.com/KTeno/ImageViewer",
+      "IconUrl": "https://raw.githubusercontent.com/KTeno/ImageViewer/main/images/icon.png",
+      "ImageUrls": [],
+      "DownloadLinkInstall": "https://github.com/KTeno/ImageViewer/releases/download/latest/SamplePlugin.zip",
+      "DownloadLinkUpdate": "https://github.com/KTeno/ImageViewer/releases/download/latest/SamplePlugin.zip",
+      "DownloadCount": 0,
+      "LastUpdate": "1609459200"
+    }
+  ]
