@@ -2,7 +2,7 @@
     {
       "Author": "Your Name",
       "Name": "Image Viewer",
-      "Description": "View images from local files or URLs in-game with zoom and pan controls",
+      "Description": "View images from local files or URLs in-game",
       "InternalName": "ImageViewer",
       "AssemblyVersion": "0.0.0.1",
       "TestingAssemblyVersion": null,
@@ -12,9 +12,9 @@
       "Punchline": "An in-game image viewer plugin",
       "IsHide": false,
       "IsTestingExclusive": false,
-      "DownloadLinkInstall": "https://github.com/KTeno/ImageViewer/releases/download/v0.0.0.1/SamplePlugin.zip",
+      "DownloadLinkInstall": "https://github.com/KTeno/ImageViewer/releases/download/v0.0.0.1/SamplePlugin.dll",
+      "DownloadLinkUpdate": "https://github.com/KTeno/ImageViewer/releases/download/v0.0.0.1/SamplePlugin.dll",
       "DownloadLinkTesting": null,
-      "DownloadLinkUpdate": "https://github.com/KTeno/ImageViewer/releases/download/v0.0.0.1/SamplePlugin.zip",
       "LastUpdate": "1732000000"
     }
   ]
